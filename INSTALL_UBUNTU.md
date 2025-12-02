@@ -19,7 +19,44 @@ sudo apt update
 sudo apt upgrade -y
 ```
 
-## Step 2: Install Docker
+## Step 2: Install Node.js 18 (Optional - Only if running npm install outside Docker)
+
+**Note**: If you're only using Docker (recommended), you can skip this step. Docker will use Node.js 18.20.4 automatically.
+
+If you need Node.js 18 on your host system (for local development or running npm install outside Docker):
+
+```bash
+# Remove existing Node.js if installed via apt
+sudo apt remove -y nodejs npm 2>/dev/null || true
+
+# Install Node.js 18.17.0 using NodeSource repository
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify installation
+node --version  # Should show v18.17.0 or similar
+npm --version
+```
+
+**Alternative: Using NVM (Node Version Manager)** - Recommended for development:
+
+```bash
+# Install NVM
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Reload shell configuration
+source ~/.bashrc
+
+# Install and use Node.js 18.17.0
+nvm install 18.17.0
+nvm use 18.17.0
+nvm alias default 18.17.0
+
+# Verify
+node --version  # Should show v18.17.0
+```
+
+## Step 3: Install Docker
 
 ### Install Docker Engine
 
@@ -61,7 +98,7 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-## Step 3: Clone the Repository
+## Step 4: Clone the Repository
 
 ```bash
 # Navigate to your preferred directory (e.g., /opt or ~)
@@ -77,11 +114,11 @@ If you don't have git installed:
 sudo apt install -y git
 ```
 
-## Step 4: Configure Environment (if needed)
+## Step 5: Configure Environment (if needed)
 
 If you need to modify any environment variables, check the `docker-compose.yml` file. The default configuration should work for most setups.
 
-## Step 5: Build and Start the Application
+## Step 6: Build and Start the Application
 
 ### Detect Your Architecture
 
@@ -121,7 +158,7 @@ TARGETARCH=arm64 docker compose up -d --build
 docker compose up -d --build
 ```
 
-## Step 6: Verify Installation
+## Step 7: Verify Installation
 
 ### Check Container Status
 
@@ -154,7 +191,7 @@ curl http://localhost:3001/api/health
 curl http://localhost
 ```
 
-## Step 7: Access the Application
+## Step 8: Access the Application
 
 - **Frontend**: `http://your-server-ip` (port 80)
 - **Backend API**: `http://your-server-ip:3001/api/health`
