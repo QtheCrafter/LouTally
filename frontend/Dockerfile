@@ -3,12 +3,11 @@ FROM node:18-slim AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files (includes package.json and package-lock.json)
 COPY package*.json ./
 
-# Install dependencies
-# Use npm install instead of npm ci since package-lock.json may not be present
-RUN npm install --no-audit --no-fund
+# Install dependencies using npm ci for reproducible builds
+RUN npm ci
 
 # Copy source code
 COPY . .

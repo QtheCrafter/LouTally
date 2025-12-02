@@ -98,4 +98,3 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 # Start the application
 CMD ["node", "src/server.js"]
-
