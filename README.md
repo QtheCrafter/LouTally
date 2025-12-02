@@ -50,7 +50,7 @@ LouTally/
 
 ### Option 1: Docker Deployment (Recommended for Linux Ubuntu)
 
-This is the easiest way to deploy on a Linux Ubuntu server.
+This is the easiest way to deploy on a Linux Ubuntu server. Supports both AMD64 and ARM64 architectures.
 
 1. **Clone the repository** (if not already done):
 ```bash
@@ -59,9 +59,20 @@ cd LouTally
 ```
 
 2. **Build and start the containers**:
-```bash
-docker-compose up -d
-```
+   
+   **For AMD64/x86_64 systems:**
+   ```bash
+   docker-compose up -d --build
+   ```
+   
+   **For ARM64/aarch64 systems (Raspberry Pi, ARM VPS, etc.):**
+   ```bash
+   # Docker will auto-detect ARM and use Chromium
+   docker-compose up -d --build
+   
+   # Or explicitly specify ARM
+   docker-compose -f docker-compose.yml -f docker-compose.arm.yml up -d --build
+   ```
 
 3. **View logs**:
 ```bash

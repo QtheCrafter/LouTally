@@ -27,9 +27,26 @@ This guide explains how to deploy the Lou Groza Award Vote Tracker using Docker 
    ```
 
 2. **Build and start the containers**:
+   
+   **For AMD64/x86_64 systems:**
    ```bash
-   docker-compose up -d
+   docker-compose up -d --build
    ```
+   
+   **For ARM64/aarch64 systems (like Raspberry Pi, ARM VPS):**
+   ```bash
+   # Option 1: Use the ARM-specific compose file
+   docker-compose -f docker-compose.yml -f docker-compose.arm.yml up -d --build
+   
+   # Option 2: Build with platform flag
+   docker-compose build --build-arg TARGETARCH=arm64
+   docker-compose up -d
+   
+   # Option 3: Let Docker auto-detect (recommended)
+   docker-compose up -d --build
+   ```
+   
+   The Dockerfile automatically detects ARM architecture and installs Chromium instead of Chrome.
 
 3. **Check the status**:
    ```bash
@@ -179,15 +196,33 @@ Then reference them in `docker-compose.yml` if needed.
 
 - **Backend**: Node.js service running on port 3001
   - Uses Puppeteer for web scraping
+  - **AMD64**: Uses Google Chrome
+  - **ARM64**: Uses Chromium (Chrome not available for ARM)
   - SQLite database for data storage
   - Express API server
+  - Automatically detects browser executable based on architecture
 
 - **Frontend**: Nginx serving React app on port 80
   - Static files from Vite build
   - Proxies `/api/*` requests to backend
   - Serves frontend on `/`
+  - Supports both AMD64 and ARM64 architectures
 
 - **Network**: Both services communicate via Docker network
+
+## ARM Architecture Support
+
+The application fully supports ARM64 (aarch64) architecture, commonly used on:
+- Raspberry Pi 4/5
+- ARM-based VPS (AWS Graviton, Oracle Cloud ARM, etc.)
+- Apple Silicon Macs (for development)
+
+**Key differences for ARM:**
+- Uses Chromium instead of Google Chrome (Chrome doesn't support ARM Linux)
+- All dependencies are ARM-compatible
+- Performance may be slightly slower than AMD64, but fully functional
+
+The Dockerfile automatically detects the architecture and installs the appropriate browser.
 
 ## Monitoring
 

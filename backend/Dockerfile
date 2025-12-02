@@ -1,6 +1,10 @@
 FROM node:18-slim
 
-# Install Puppeteer dependencies and Google Chrome
+# Detect architecture and install appropriate browser
+ARG TARGETARCH
+ARG TARGETPLATFORM
+
+# Install Puppeteer dependencies
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
@@ -39,11 +43,24 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     lsb-release \
     xdg-utils \
-    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
+
+# Install browser based on architecture
+# For AMD64/x86_64: Install Google Chrome
+# For ARM64/aarch64: Install Chromium (Chrome not available for ARM)
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
+        sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' && \
+        apt-get update && \
+        apt-get install -y google-chrome-stable && \
+        rm -rf /var/lib/apt/lists/*; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+        apt-get update && \
+        apt-get install -y chromium chromium-sandbox && \
+        rm -rf /var/lib/apt/lists/*; \
+    else \
+        echo "Unsupported architecture: $TARGETARCH" && exit 1; \
+    fi
 
 # Set working directory
 WORKDIR /app
@@ -65,6 +82,17 @@ EXPOSE 3001
 
 # Set environment variables for Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+# Set executable path based on architecture
+# For ARM64, use Chromium; for AMD64, use Chrome
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium' >> /etc/profile.d/puppeteer.sh; \
+    else \
+        echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable' >> /etc/profile.d/puppeteer.sh; \
+    fi
+
+# Set default (will be overridden by runtime detection in scraper.js)
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 # Start the application

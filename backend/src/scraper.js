@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import { insertVoteSnapshot } from './db.js';
+import { existsSync } from 'fs';
 
 const TARGET_URL = 'https://lougrozaaward.com/finalists/2025/';
 
@@ -48,10 +49,31 @@ export async function scrapeVotes() {
     // Use DEBUG environment variable to run in non-headless mode
     const isDebug = process.env.DEBUG === 'true';
     
-    browser = await puppeteer.launch({
+    // Determine Chrome/Chromium executable path
+    // Priority: 1) Environment variable, 2) Check for Chromium (ARM), 3) Check for Chrome (AMD64), 4) Let Puppeteer use bundled
+    let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    
+    if (!executablePath) {
+      // Check for Chromium first (common on ARM Linux)
+      if (existsSync('/usr/bin/chromium')) {
+        executablePath = '/usr/bin/chromium';
+      } else if (existsSync('/usr/bin/google-chrome-stable')) {
+        executablePath = '/usr/bin/google-chrome-stable';
+      }
+      // If neither exists, Puppeteer will use its bundled Chromium
+    }
+    
+    const launchOptions = {
       headless: isDebug ? false : 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    };
+    
+    // Only set executablePath if we found one
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
+    }
+    
+    browser = await puppeteer.launch(launchOptions);
     
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });

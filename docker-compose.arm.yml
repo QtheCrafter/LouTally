@@ -1,0 +1,16 @@
+version: '3.8'
+
+# ARM-specific docker-compose override
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.arm.yml up -d --build
+# 
+# This file ensures ARM64 builds use Chromium instead of Chrome.
+# The main docker-compose.yml should auto-detect, but this provides explicit override.
+
+services:
+  backend:
+    build:
+      args:
+        TARGETARCH: arm64
+    environment:
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+

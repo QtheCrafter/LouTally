@@ -5,6 +5,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
+      args:
+        TARGETARCH: ${TARGETARCH:-amd64}
     container_name: lou-tally-backend
     ports:
       - "3001:3001"
@@ -26,6 +31,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
       args:
         VITE_API_URL: ""  # Use relative paths, nginx will proxy
     container_name: lou-tally-frontend
