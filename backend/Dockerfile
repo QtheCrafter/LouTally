@@ -8,6 +8,12 @@ ARG TARGETPLATFORM
 # Install Puppeteer dependencies and browser in a single layer
 # Auto-detect architecture if TARGETARCH is not provided
 RUN ARCH=$(dpkg --print-architecture) && \
+    # Use TARGETARCH if set, otherwise detect from dpkg
+    if [ -n "$TARGETARCH" ]; then \
+        DETECTED_ARCH="$TARGETARCH"; \
+    else \
+        DETECTED_ARCH="$ARCH"; \
+    fi && \
     apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
@@ -48,10 +54,9 @@ RUN ARCH=$(dpkg --print-architecture) && \
     lsb-release \
     xdg-utils \
     && \
-    # Install browser based on architecture (use detected ARCH or TARGETARCH)
-    DETECTED_ARCH=${TARGETARCH:-$ARCH} && \
+    # Install browser based on architecture
     if [ "$DETECTED_ARCH" = "amd64" ] || [ "$DETECTED_ARCH" = "x86_64" ]; then \
-        # Modern way to add Google Chrome repository (deprecated apt-key replaced)
+        echo "Installing Chrome for amd64/x86_64 architecture" && \
         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg && \
         echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
         apt-get update && \
@@ -59,12 +64,13 @@ RUN ARCH=$(dpkg --print-architecture) && \
         rm -rf /var/lib/apt/lists/* && \
         echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable' > /etc/profile.d/puppeteer.sh; \
     elif [ "$DETECTED_ARCH" = "arm64" ] || [ "$DETECTED_ARCH" = "aarch64" ]; then \
+        echo "Installing Chromium for arm64/aarch64 architecture" && \
         apt-get update && \
         apt-get install -y --no-install-recommends chromium chromium-sandbox && \
         rm -rf /var/lib/apt/lists/* && \
         echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium' > /etc/profile.d/puppeteer.sh; \
     else \
-        echo "Unsupported architecture: $DETECTED_ARCH (detected from: ARCH=$ARCH, TARGETARCH=$TARGETARCH)" && exit 1; \
+        echo "Unsupported architecture: DETECTED_ARCH=$DETECTED_ARCH, ARCH=$ARCH, TARGETARCH=$TARGETARCH" && exit 1; \
     fi
 
 # Set working directory
@@ -75,9 +81,9 @@ COPY package.json ./
 # Copy package-lock.json if it exists (for reproducible builds)
 COPY package-lock.json* ./
 
-# Install dependencies - use npm ci if lock file exists, otherwise npm install
+# Install dependencies - try npm ci first, fall back to npm install if lock file is out of sync
 RUN if [ -f package-lock.json ]; then \
-        npm ci --omit=dev --no-audit --no-fund; \
+        npm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit --no-fund; \
     else \
         npm install --omit=dev --no-audit --no-fund; \
     fi && \
