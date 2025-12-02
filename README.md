@@ -1,42 +1,166 @@
 # Lou Groza Award Vote Tracker
 
-GitHub Pages static site that polls the Lou Groza Award finalists page and charts the publicly visible vote totals for the three 2025 finalists.
+A web application that automatically tracks vote percentages for Lou Groza Award finalists by scraping the official website every minute and displaying the data in real-time charts.
 
 ## Features
 
-- Calls the Lou Groza TotalPoll AJAX endpoint every 60 seconds to simulate pressing the “Results” button.
-- Parses the `totalpoll-question-choices-item-votes-text` elements and plots the vote percentages using Chart.js.
-- Displays a compact table and bar chart snapshot alongside timestamps and status messaging.
-- Includes a manual refresh button for on-demand updates.
+- **Automated Scraping**: Puppeteer-based bot that visits the Lou Groza Award finalists page, clicks the Results button, and extracts vote percentages
+- **Data Storage**: SQLite database stores historical vote snapshots with timestamps
+- **Real-time Dashboard**: React frontend with Chart.js visualizations showing vote trends over time
+- **Auto-refresh**: Frontend polls the backend API every minute for the latest data
 
-## Getting Started
+## Project Structure
 
-1. **Clone and install dependencies**  
-   This project is completely static, so there are no build steps or dependencies. Serve the repository with any static file server for local testing. On Windows 11 PowerShell you can run:
-   ```powershell
-   cd C:\Users\quint\source\repos\LouTally
-   python -m http.server 8000
-   ```
-   Then open <http://localhost:8000/> in your browser.
+```
+LouTally/
+├── backend/           # Node.js backend service
+│   ├── src/
+│   │   ├── db.js      # SQLite database helpers
+│   │   ├── scraper.js # Puppeteer scraping logic
+│   │   └── server.js  # Express API server
+│   ├── data/          # SQLite database (created automatically)
+│   └── package.json
+├── frontend/          # React frontend application
+│   ├── src/
+│   │   ├── App.jsx    # Main dashboard component
+│   │   ├── App.css    # Styles
+│   │   ├── main.jsx   # Entry point
+│   │   └── index.css  # Global styles
+│   ├── index.html
+│   ├── vite.config.js
+│   └── package.json
+└── README.md
+```
 
-2. **GitHub Pages**  
-   - Create a repository on GitHub and push this code.  
-   - Under the repository settings, enable GitHub Pages (Deploy from branch, `main`, `/root`).  
-   - Your live site will be available at `https://<your-username>.github.io/<repo-name>/`.
+## Prerequisites
 
-## CORS Proxy
+- **Node.js** (v18 or higher) - [Download for Windows](https://nodejs.org/)
+- **npm** (comes with Node.js)
 
-Browsers block cross-origin requests to third-party sites. The script uses the public proxy at `https://corsproxy.io/`. Replace the `PROXY_PREFIX` constant in `script.js` if you prefer a different or self-hosted proxy.
+## Installation
 
-## Customization
+### Backend Setup
 
-- Update the `FINALIST_LABELS` array and table rows in `index.html` if the finalists change.
-- Adjust the `REFRESH_INTERVAL_MS` constant in `script.js` to fetch more or less frequently.
-- Tweak colors in `styles.css` to match your preferred theme.
+1. Navigate to the backend directory:
+```powershell
+cd backend
+```
 
-## Limitations
+2. Install dependencies:
+```powershell
+npm install
+```
 
-- If the upstream website restructures its markup, hides results server-side, or rate-limits proxy access, the script will show an error message.
-- The solution does not submit any voting actions; it only reads publicly available totals.
-- The totals returned by the poll endpoint are percentages, not raw vote counts.
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+```powershell
+cd frontend
+```
+
+2. Install dependencies:
+```powershell
+npm install
+```
+
+## Running the Application
+
+### Start the Backend Server
+
+Open a PowerShell terminal and run:
+
+```powershell
+cd backend
+npm start
+```
+
+The backend will:
+- Start the Express API server on `http://localhost:3001`
+- Perform an initial scrape of vote data
+- Schedule automatic scraping every minute
+- Create the SQLite database automatically in `backend/data/votes.db`
+
+### Start the Frontend Development Server
+
+Open a **second** PowerShell terminal and run:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+The frontend will start on `http://localhost:3000` and automatically open in your browser.
+
+## API Endpoints
+
+- `GET /api/votes` - Get all vote history grouped by candidate
+- `GET /api/votes/latest` - Get the most recent vote percentages
+- `GET /api/health` - Health check endpoint
+
+## How It Works
+
+1. **Scraping Process**:
+   - Puppeteer launches a headless browser
+   - Navigates to `https://lougrozaaward.com/finalists/2025/`
+   - Clicks the "Results" button to reveal vote percentages
+   - Extracts percentages from elements with class `.totalpoll-question-choices-item-votes-text`
+   - Stores the data in SQLite with timestamps
+
+2. **Data Storage**:
+   - Each scrape creates a new snapshot in the database
+   - Data is stored with candidate name, percentage, and timestamp
+   - Historical data is preserved for trend analysis
+
+3. **Frontend Display**:
+   - Fetches vote history from the backend API
+   - Displays current percentages in cards
+   - Shows a line chart with vote trends over time
+   - Auto-refreshes every minute
+
+## Troubleshooting
+
+### Backend Issues
+
+- **Port already in use**: Change the PORT in `backend/src/server.js` or stop the process using port 3001
+- **Puppeteer installation fails**: You may need to install additional system dependencies. On Windows, Puppeteer should work out of the box with Node.js.
+
+### Frontend Issues
+
+- **Cannot connect to backend**: Ensure the backend server is running on port 3001
+- **No data showing**: Wait a minute for the scraper to collect initial data, or check the backend console for scraping errors
+
+### Scraping Issues
+
+- **Results button not found**: The website structure may have changed. Check the browser console logs for details
+- **No vote percentages extracted**: Verify the CSS selector `.totalpoll-question-choices-item-votes-text` still exists on the page
+
+## Development
+
+### Backend Development Mode
+
+Run with auto-reload:
+```powershell
+cd backend
+npm run dev
+```
+
+### Frontend Build for Production
+
+```powershell
+cd frontend
+npm run build
+```
+
+The built files will be in `frontend/dist/`.
+
+## Notes
+
+- The scraper runs every minute automatically once the backend starts
+- The database file (`backend/data/votes.db`) will be created automatically on first run
+- The frontend polls the API every minute for new data
+- All timestamps are stored in UTC format
+
+## License
+
+ISC
 
