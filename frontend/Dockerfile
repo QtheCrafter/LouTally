@@ -4,10 +4,16 @@ FROM node:18.20.4-slim AS builder
 WORKDIR /app
 
 # Copy package files first for better layer caching
-COPY package.json package-lock.json ./
+COPY package.json ./
+# Copy package-lock.json if it exists (for reproducible builds)
+COPY package-lock.json* ./
 
-# Install dependencies using npm ci for reproducible builds
-RUN npm ci --no-audit --no-fund && \
+# Install dependencies - use npm ci if lock file exists, otherwise npm install
+RUN if [ -f package-lock.json ]; then \
+        npm ci --no-audit --no-fund; \
+    else \
+        npm install --no-audit --no-fund; \
+    fi && \
     npm cache clean --force
 
 # Copy source code
