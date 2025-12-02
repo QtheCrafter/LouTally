@@ -19,6 +19,7 @@ LouTally/
 │   │   ├── scraper.js # Puppeteer scraping logic
 │   │   └── server.js  # Express API server
 │   ├── data/          # SQLite database (created automatically)
+│   ├── Dockerfile     # Docker configuration for backend
 │   └── package.json
 ├── frontend/          # React frontend application
 │   ├── src/
@@ -28,16 +29,69 @@ LouTally/
 │   │   └── index.css  # Global styles
 │   ├── index.html
 │   ├── vite.config.js
+│   ├── nginx.conf     # Nginx configuration for production
+│   ├── Dockerfile     # Docker configuration for frontend
 │   └── package.json
+├── docker-compose.yml # Docker Compose configuration
 └── README.md
 ```
 
 ## Prerequisites
 
+### For Local Development (Windows)
 - **Node.js** (v18 or higher) - [Download for Windows](https://nodejs.org/)
 - **npm** (comes with Node.js)
 
+### For Docker Deployment (Linux Ubuntu)
+- **Docker** (20.10 or higher) - [Install Docker](https://docs.docker.com/engine/install/ubuntu/)
+- **Docker Compose** (v2.0 or higher) - Usually included with Docker Desktop or install separately
+
 ## Installation
+
+### Option 1: Docker Deployment (Recommended for Linux Ubuntu)
+
+This is the easiest way to deploy on a Linux Ubuntu server.
+
+1. **Clone the repository** (if not already done):
+```bash
+git clone <repository-url>
+cd LouTally
+```
+
+2. **Build and start the containers**:
+```bash
+docker-compose up -d
+```
+
+3. **View logs**:
+```bash
+# All services
+docker-compose logs -f
+
+# Backend only
+docker-compose logs -f backend
+
+# Frontend only
+docker-compose logs -f frontend
+```
+
+4. **Access the application**:
+   - Frontend: http://localhost (or http://your-server-ip)
+   - Backend API: http://localhost:3001/api/health
+
+5. **Stop the containers**:
+```bash
+docker-compose down
+```
+
+6. **Rebuild after code changes**:
+```bash
+docker-compose up -d --build
+```
+
+**Note**: The SQLite database is persisted in `backend/data/` directory, so your data will survive container restarts.
+
+### Option 2: Local Development Setup
 
 ### Backend Setup
 

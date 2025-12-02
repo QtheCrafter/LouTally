@@ -24,7 +24,10 @@ ChartJS.register(
   Filler
 );
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Use relative paths in production (nginx proxies /api to backend)
+// In development, use localhost:3001
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
 function App() {
   const [voteData, setVoteData] = useState({});
