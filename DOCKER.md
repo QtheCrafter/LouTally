@@ -35,18 +35,22 @@ This guide explains how to deploy the Lou Groza Award Vote Tracker using Docker 
    
    **For ARM64/aarch64 systems (like Raspberry Pi, ARM VPS):**
    ```bash
-   # Option 1: Use the ARM-specific compose file
-   docker-compose -f docker-compose.yml -f docker-compose.arm.yml up -d --build
+   # Option 1: Use the build script (auto-detects architecture)
+   chmod +x build.sh
+   ./build.sh
    
-   # Option 2: Build with platform flag
-   docker-compose build --build-arg TARGETARCH=arm64
+   # Option 2: Explicitly set TARGETARCH
+   TARGETARCH=arm64 docker-compose build
    docker-compose up -d
    
-   # Option 3: Let Docker auto-detect (recommended)
+   # Option 3: Use the ARM-specific compose file
+   docker-compose -f docker-compose.yml -f docker-compose.arm.yml up -d --build
+   
+   # Option 4: Let Docker auto-detect (may not work on all systems)
    docker-compose up -d --build
    ```
    
-   The Dockerfile automatically detects ARM architecture and installs Chromium instead of Chrome.
+   The Dockerfile automatically detects ARM architecture via TARGETARCH build arg and installs Chromium instead of Chrome.
 
 3. **Check the status**:
    ```bash
