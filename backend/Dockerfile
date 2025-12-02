@@ -1,12 +1,14 @@
-FROM node:18-slim
+# Pin Node.js to LTS version 18.20.4 (slim variant for smaller image)
+FROM node:18.20.4-slim
 
 # Detect architecture and install appropriate browser
-ARG TARGETARCH
+ARG TARGETARCH=amd64
 ARG TARGETPLATFORM
 
-# Install Puppeteer dependencies
-RUN apt-get update && apt-get install -y \
+# Install Puppeteer dependencies and browser in a single layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
+    curl \
     gnupg \
     ca-certificates \
     fonts-liberation \
@@ -43,21 +45,21 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     lsb-release \
     xdg-utils \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install browser based on architecture
-# For AMD64/x86_64: Install Google Chrome
-# For ARM64/aarch64: Install Chromium (Chrome not available for ARM)
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-        sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' && \
+    && \
+    # Install browser based on architecture
+    if [ "$TARGETARCH" = "amd64" ]; then \
+        # Modern way to add Google Chrome repository (deprecated apt-key replaced)
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg && \
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
         apt-get update && \
-        apt-get install -y google-chrome-stable && \
-        rm -rf /var/lib/apt/lists/*; \
+        apt-get install -y --no-install-recommends google-chrome-stable && \
+        rm -rf /var/lib/apt/lists/* && \
+        echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable' > /etc/profile.d/puppeteer.sh; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
         apt-get update && \
-        apt-get install -y chromium chromium-sandbox && \
-        rm -rf /var/lib/apt/lists/*; \
+        apt-get install -y --no-install-recommends chromium chromium-sandbox && \
+        rm -rf /var/lib/apt/lists/* && \
+        echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium' > /etc/profile.d/puppeteer.sh; \
     else \
         echo "Unsupported architecture: $TARGETARCH" && exit 1; \
     fi
@@ -65,12 +67,12 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files first for better layer caching
+COPY package.json package-lock.json ./
 
-# Install dependencies
-# Use npm install instead of npm ci since package-lock.json may not be present
-RUN npm install --omit=dev --no-audit --no-fund
+# Install dependencies using npm ci for reproducible builds
+RUN npm ci --omit=dev --no-audit --no-fund && \
+    npm cache clean --force
 
 # Copy application code
 COPY src/ ./src/
@@ -82,18 +84,10 @@ RUN mkdir -p /app/data
 EXPOSE 3001
 
 # Set environment variables for Puppeteer
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    NODE_ENV=production
 
-# Set executable path based on architecture
-# For ARM64, use Chromium; for AMD64, use Chrome
-ARG TARGETARCH
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-        echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium' >> /etc/profile.d/puppeteer.sh; \
-    else \
-        echo 'export PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable' >> /etc/profile.d/puppeteer.sh; \
-    fi
-
-# Set default (will be overridden by runtime detection in scraper.js)
+# Set default executable path (will be overridden by runtime detection in scraper.js)
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 # Start the application
