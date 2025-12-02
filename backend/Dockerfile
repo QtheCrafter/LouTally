@@ -1,5 +1,5 @@
-# Pin Node.js to LTS version 18.20.4 (slim variant for smaller image)
-FROM node:18.20.4-slim
+# Pin Node.js to version 24 (slim variant for smaller image, includes npm 11)
+FROM node:24-slim
 
 # Detect architecture and install appropriate browser
 ARG TARGETARCH

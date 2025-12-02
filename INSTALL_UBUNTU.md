@@ -19,41 +19,42 @@ sudo apt update
 sudo apt upgrade -y
 ```
 
-## Step 2: Install Node.js 18 (Optional - Only if running npm install outside Docker)
+## Step 2: Install Node.js 24 (Optional - Only if running npm install outside Docker)
 
-**Note**: If you're only using Docker (recommended), you can skip this step. Docker will use Node.js 18.20.4 automatically.
+**Note**: If you're only using Docker (recommended), you can skip this step. Docker will use Node.js 24 automatically.
 
-If you need Node.js 18 on your host system (for local development or running npm install outside Docker):
+If you need Node.js 24 on your host system (for local development or running npm install outside Docker):
 
 ```bash
 # Remove existing Node.js if installed via apt
 sudo apt remove -y nodejs npm 2>/dev/null || true
 
-# Install Node.js 18.17.0 using NodeSource repository
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Install Node.js 24 using NodeSource repository
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Verify installation
-node --version  # Should show v18.17.0 or similar
-npm --version
+node --version  # Should show v24.x.x or similar
+npm --version   # Should show v11.x.x or similar
 ```
 
 **Alternative: Using NVM (Node Version Manager)** - Recommended for development:
 
 ```bash
 # Install NVM
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 
 # Reload shell configuration
 source ~/.bashrc
 
-# Install and use Node.js 18.17.0
-nvm install 18.17.0
-nvm use 18.17.0
-nvm alias default 18.17.0
+# Install and use Node.js 24
+nvm install 24
+nvm use 24
+nvm alias default 24
 
 # Verify
-node --version  # Should show v18.17.0
+node --version  # Should show v24.x.x
+npm --version   # Should show v11.x.x
 ```
 
 ## Step 3: Install Docker

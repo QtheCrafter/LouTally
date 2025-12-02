@@ -1,5 +1,5 @@
-# Build stage - Pin Node.js to LTS version 18.20.4
-FROM node:18.20.4-slim AS builder
+# Build stage - Pin Node.js to version 24 (includes npm 11)
+FROM node:24-slim AS builder
 
 WORKDIR /app
 

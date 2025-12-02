@@ -39,8 +39,8 @@ LouTally/
 ## Prerequisites
 
 ### For Local Development (Windows)
-- **Node.js** (v18 or higher) - [Download for Windows](https://nodejs.org/)
-- **npm** (comes with Node.js)
+- **Node.js** (v24 or higher) - [Download for Windows](https://nodejs.org/)
+- **npm** (v11 or higher, comes with Node.js)
 
 ### For Docker Deployment (Linux Ubuntu)
 - **Docker** (20.10 or higher) - [Install Docker](https://docs.docker.com/engine/install/ubuntu/)
