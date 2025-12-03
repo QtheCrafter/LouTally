@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lou Groza Award Vote Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .stat-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .last-updated {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 Lou Groza Award Vote Tracker</h1>
+            <p class="subtitle">Real-time tracking of finalist vote percentages</p>
+        </header>
+
+        <div id="error-container"></div>
+
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2 class="chart-title">Vote Percentage Over Time</h2>
+            <canvas id="voteChart"></canvas>
+        </div>
+
+        <div class="last-updated" id="last-updated">
+            Last updated: Loading...
+        </div>
+    </div>
+
+    <script>
+        let voteChart = null;
+        const API_BASE = window.location.origin;
+
+        // Color palette for candidates
+        const colors = [
+            { bg: 'rgba(102, 126, 234, 0.2)', border: 'rgba(102, 126, 234, 1)' },
+            { bg: 'rgba(118, 75, 162, 0.2)', border: 'rgba(118, 75, 162, 1)' },
+            { bg: 'rgba(255, 107, 107, 0.2)', border: 'rgba(255, 107, 107, 1)' },
+            { bg: 'rgba(72, 219, 251, 0.2)', border: 'rgba(72, 219, 251, 1)' },
+            { bg: 'rgba(255, 206, 84, 0.2)', border: 'rgba(255, 206, 84, 1)' }
+        ];
+
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function clearError() {
+            document.getElementById('error-container').innerHTML = '';
+        }
+
+        async function fetchVotes() {
+            try {
+                const response = await fetch(`${API_BASE}/api/votes`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch votes');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching votes:', error);
+                showError('Failed to load vote data. Please refresh the page.');
+                throw error;
+            }
+        }
+
+        async function fetchLatestVotes() {
+            try {
+                const response = await fetch(`${API_BASE}/api/votes/latest`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch latest votes');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching latest votes:', error);
+                throw error;
+            }
+        }
+
+        function updateStats(latestVotes) {
+            const statsGrid = document.getElementById('stats-grid');
+            
+            if (latestVotes.length === 0) {
+                statsGrid.innerHTML = '<div class="stat-card"><div class="loading">No data available yet</div></div>';
+                return;
+            }
+
+            statsGrid.innerHTML = latestVotes.map((vote, index) => {
+                const color = colors[index % colors.length];
+                return `
+                    <div class="stat-card" style="border-top: 4px solid ${color.border}">
+                        <h3>${vote.candidate_name}</h3>
+                        <div class="stat-value" style="color: ${color.border}">${vote.vote_percent.toFixed(1)}%</div>
+                        <div class="stat-label">Current Vote Percentage</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateChart(voteData) {
+            // Group data by candidate
+            const candidates = {};
+            
+            voteData.forEach(entry => {
+                if (!candidates[entry.candidate_name]) {
+                    candidates[entry.candidate_name] = [];
+                }
+                candidates[entry.candidate_name].push({
+                    x: new Date(entry.timestamp),
+                    y: entry.vote_percent
+                });
+            });
+
+            // Sort data by timestamp for each candidate
+            Object.keys(candidates).forEach(candidate => {
+                candidates[candidate].sort((a, b) => a.x - b.x);
+            });
+
+            const candidateNames = Object.keys(candidates);
+            const datasets = candidateNames.map((name, index) => {
+                const color = colors[index % colors.length];
+                return {
+                    label: name,
+                    data: candidates[name],
+                    borderColor: color.border,
+                    backgroundColor: color.bg,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                };
+            });
+
+            const ctx = document.getElementById('voteChart').getContext('2d');
+
+            if (voteChart) {
+                voteChart.data.datasets = datasets;
+                voteChart.data.labels = null; // Time series uses x-axis
+                voteChart.update();
+            } else {
+                voteChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute',
+                                    displayFormats: {
+                                        minute: 'HH:mm'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Time'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Vote Percentage (%)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateLastUpdated() {
+            const lastUpdatedEl = document.getElementById('last-updated');
+            lastUpdatedEl.textContent = `Last updated: ${new Date().toLocaleString()}`;
+        }
+
+        async function loadData() {
+            try {
+                clearError();
+                const [voteData, latestVotes] = await Promise.all([
+                    fetchVotes(),
+                    fetchLatestVotes()
+                ]);
+
+                if (voteData.length > 0) {
+                    updateChart(voteData);
+                    updateStats(latestVotes);
+                    updateLastUpdated();
+                } else {
+                    showError('No vote data available yet. The bot may still be collecting data.');
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // Load data on page load
+        loadData();
+
+        // Refresh data every 30 seconds
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
+
